@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Simple File Upload Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>File Upload Demo</h1>
+            <p>Drag & drop files here or click to select. Upload is simulated; replace with your server code.</p>
+
+            <div id="drop" class="drop" tabindex="0">
+                <strong>Drop files here</strong>
+                <div style="margin-top:8px">
+                    or <button id="selectBtn" class="btn secondary" type="button">Choose files</button>
+                </div>
+                <input id="fileInput" type="file" multiple style="display:none" />
+            </div>
+
+            <div id="fileArea" class="file-list"></div>
+
+            <footer>
+                <button id="uploadAll" class="btn" type="button">Upload All</button>
+                <button id="clearAll" class="btn secondary" type="button">Clear</button>
+            </footer>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+
+</html>
