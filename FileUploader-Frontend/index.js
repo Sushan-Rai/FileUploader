@@ -64,49 +64,116 @@ clearAllBtn.addEventListener('click', clearAll);
 
 function renderFiles() {
     fileArea.innerHTML = '';
-    if (!state.files.length) return fileArea.innerHTML = '<div style="padding:12px;color:var(--muted)">No files selected.</div>';
+    if (!state.files.length) {
+        fileArea.innerHTML = '<div style="padding:12px;color:var(--muted)">No files selected.</div>';
+        return;
+    }
 
     state.files.forEach(f => {
-        const row = document.createElement('div'); row.className = 'file-row';
+        const row = document.createElement('div');
+        row.className = 'file-row';
 
         const thumb = document.createElement(f.previewUrl ? 'img' : 'div');
         thumb.className = 'thumb';
-        if (f.previewUrl) { thumb.src = f.previewUrl; thumb.alt = f.name; }
-        else { thumb.textContent = f.name.split('.').pop().toUpperCase(); }
+        if (f.previewUrl) {
+            thumb.src = f.previewUrl;
+            thumb.alt = f.name;
+        } else {
+            thumb.textContent = f.name.split('.').pop().toUpperCase();
+        }
 
-        const meta = document.createElement('div'); meta.className = 'meta';
-        meta.innerHTML = `<div class="name">${f.name}</div><div class="status">${humanFileSize(f.size)} • ${f.status}</div>`;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `
+            <div class="name">${f.name}</div>
+            <div class="status">${humanFileSize(f.size)} • ${f.status}</div>
+        `;
 
-        const actions = document.createElement('div'); actions.className = 'actions';
-        const removeBtn = document.createElement('button'); removeBtn.className = 'btn secondary'; removeBtn.textContent = 'Remove';
+        if (f.status === 'done' && f.link) {
+            const linkDiv = document.createElement('div');
+            linkDiv.className = 'link';
+            linkDiv.innerHTML = `<a href="${f.link}" target="_blank">${f.link}</a>`;
+            meta.appendChild(linkDiv);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn secondary';
+        removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', () => removeFile(f.id));
         actions.appendChild(removeBtn);
 
-        const progWrap = document.createElement('div'); progWrap.style.width = '180px';
+        const progWrap = document.createElement('div');
+        progWrap.style.width = '180px';
         progWrap.innerHTML = `<div class="progress"><i style="width:${f.progress}%"></i></div>`;
 
-        row.appendChild(thumb); row.appendChild(meta); row.appendChild(progWrap); row.appendChild(actions);
+        row.appendChild(thumb);
+        row.appendChild(meta);
+        row.appendChild(progWrap);
+        row.appendChild(actions);
+
         fileArea.appendChild(row);
     });
 }
 
-async function simulateUploadSingle(f) {
-    f.status = 'uploading'; renderFiles();
-    let step = 0, total = 10 + Math.floor(Math.random() * 10);
-    return new Promise(resolve => {
-        const t = setInterval(() => {
-            step++; f.progress = Math.min(100, Math.round(step / total * 100)); renderFiles();
-            if (step >= total) { clearInterval(t); f.status = 'done'; f.progress = 100; renderFiles(); resolve(); }
-        }, 150);
+async function uploadSingle(f) {
+    f.status = 'uploading';
+    f.progress = 0;
+    renderFiles();
+
+    const formData = new FormData();
+    formData.append('file', f.file);
+
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'http://localhost:3000/upload'); // backend URL
+
+        // Track progress
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                f.progress = Math.round((e.loaded / e.total) * 100);
+                renderFiles();
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                f.status = 'done';
+                f.progress = 100;
+                f.link = res.fileUrl; 
+                renderFiles();
+                resolve();
+            } else {
+                f.status = 'error';
+                renderFiles();
+                reject(new Error(`Upload failed: ${xhr.status}`));
+            }
+        };
+
+        xhr.onerror = () => {
+            f.status = 'error';
+            renderFiles();
+            reject(new Error("Network error"));
+        };
+
+        xhr.send(formData);
     });
 }
 
 async function uploadAll() {
     if (!state.files.length) return alert('No files to upload');
     uploadAllBtn.disabled = true;
-    for (const f of state.files) await simulateUploadSingle(f);
+    for (const f of state.files) {
+        try {
+            await uploadSingle(f);
+        } catch (err) {
+            console.error(err);
+        }
+    }
     uploadAllBtn.disabled = false;
-    alert('All uploads simulated!');
+    // alert('All uploads finished!');
 }
 uploadAllBtn.addEventListener('click', uploadAll);
 

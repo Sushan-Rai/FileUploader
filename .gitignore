@@ -1,1 +1,2 @@
-./FileUploader-Backend/node_modules/
+FileUploader-Backend/node_modules/
+FileUploader-Backend/.env
